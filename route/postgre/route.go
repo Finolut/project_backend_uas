@@ -1,16 +1,15 @@
 package route
 
 import (
-	"clean-arch/app/service"
-	"clean-arch/middleware"
+	"database/sql"
+
+	"clean-arch/app/service/postgre"
+	"clean-arch/middleware/postgre"
 
 	"github.com/gofiber/fiber/v2"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func RegisterRoutes(app *fiber.App, db *mongo.Database) {
-
-	RegisterFileRoutes(app, db)
+func RegisterRoutes(app *fiber.App, db *sql.DB) {
 
 	// Alumni Auth routes
 	app.Post("/alumni/register", func(c *fiber.Ctx) error {

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"clean-arch/config"
+	"clean-arch/config/mongo"
 	"clean-arch/database"
 	_ "clean-arch/docs"
 	"clean-arch/route"

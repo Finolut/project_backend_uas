@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"clean-arch/app/model"
+	"clean-arch/app/model/mongo"
 	"context"
 	"time"
 

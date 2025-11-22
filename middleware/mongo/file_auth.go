@@ -3,7 +3,7 @@ package middleware
 import (
 	"strings"
 
-	"clean-arch/utils"
+	"clean-arch/utils/mongo"
 
 	"github.com/gofiber/fiber/v2"
 )

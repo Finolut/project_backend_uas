@@ -1,9 +1,9 @@
 package service
 
 import (
-	"clean-arch/app/model"
-	"clean-arch/app/repository"
-	"clean-arch/utils"
+	"clean-arch/app/model/mongo"
+	"clean-arch/app/repository/mongo"
+	"clean-arch/utils/mongo"
 	"mime/multipart"
 	"os"
 	"path/filepath"

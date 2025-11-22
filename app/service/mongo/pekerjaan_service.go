@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"clean-arch/app/model"
-	"clean-arch/app/repository"
+	"clean-arch/app/model/mongo"
+	"clean-arch/app/repository/mongo"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"

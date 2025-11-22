@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"clean-arch/app/model"
+	"clean-arch/app/model/mongo"
 	"strconv"
 	"strings"
 

@@ -1,18 +1,17 @@
 package utils
 
 import (
-	"clean-arch/app/model"
+	"clean-arch/app/model/postgre"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var jwtSecret = []byte("your-secret-key-min-32-characters-long")
 
 func GenerateToken(user model.User) (string, error) {
 	claims := model.JWTClaims{
-		UserID:   user.ID.Hex(),
+		UserID:   user.ID,
 		Username: user.Username,
 		Role:     user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -27,7 +26,7 @@ func GenerateToken(user model.User) (string, error) {
 
 func GenerateAlumniToken(alumni model.Alumni) (string, error) {
 	claims := model.AlumniJWTClaims{
-		AlumniID: alumni.ID.Hex(),
+		AlumniID: alumni.ID,
 		NIM:      alumni.NIM,
 		Nama:     alumni.Nama,
 		Email:    alumni.Email,
@@ -74,9 +73,4 @@ func ValidateAlumniToken(tokenString string) (*model.AlumniJWTClaims, error) {
 	}
 
 	return nil, jwt.ErrInvalidKey
-}
-
-// Helper function to get ObjectID from hex string
-func HexToObjectID(hexString string) (primitive.ObjectID, error) {
-	return primitive.ObjectIDFromHex(hexString)
 }

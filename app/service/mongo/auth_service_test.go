@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"clean-arch/app/model"
+	"clean-arch/app/model/mongo"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

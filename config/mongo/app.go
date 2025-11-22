@@ -3,8 +3,8 @@ package config
 import (
 	"log"
 
-	"clean-arch/app/service"
-	"clean-arch/middleware"
+	"clean-arch/app/service/mongo"
+	"clean-arch/middleware/mongo"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
