@@ -22,6 +22,6 @@ func LoadEnv() {
 		os.Setenv("API_KEY", "12345")
 	}
 	if os.Getenv("DB_DSN") == "" {
-		os.Setenv("DB_DSN", "postgres://postgres:admin@localhost:5432/alumni_db?sslmode=disable")
+		os.Setenv("DB_DSN", "postgres://postgres:admin@localhost:5432/alumni_db2?sslmode=disable")
 	}
 }

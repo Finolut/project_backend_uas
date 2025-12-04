@@ -25,9 +25,9 @@ import (
 	postgreRoute "clean-arch/route/postgre"
 )
 
-// @title Alumni Management API
+// @title Auth API v1
 // @version 1.0
-// @description API untuk mengelola data alumni menggunakan Clean Architecture (Support MongoDB & PostgreSQL)
+// @description API untuk autentikasi dan manajemen user menggunakan Clean Architecture (Support MongoDB & PostgreSQL)
 // @host localhost:3000
 // @BasePath /
 // @schemes http
@@ -49,7 +49,7 @@ func main() {
 
 	// Tentukan driver: "mongo" atau "postgres" (default ke mongo jika kosong)
 	dbDriver := os.Getenv("DB_DRIVER")
-	
+
 	var app *fiber.App
 
 	// 2. Inisialisasi berdasarkan Driver Database
@@ -90,6 +90,7 @@ func main() {
 
 	// 3. Jalankan Server
 	log.Printf("🚀 Server running on port %s using %s driver", port, dbDriver)
+	log.Println("📚 Swagger docs available at http://localhost:" + port + "/swagger/index.html")
 	if err := app.Listen(":" + port); err != nil {
 		log.Fatal(err)
 	}
