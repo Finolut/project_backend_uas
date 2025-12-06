@@ -51,6 +51,8 @@ func main() {
 		driver = "mongo"
 	}
 
+
+
 	// Holders
 	var pgDB *sql.DB
 	var mongoClient *mongo.Client
@@ -88,6 +90,30 @@ func main() {
 			}
 		}
 
+		// ... di dalam fungsi main()
+
+	// Build repositories
+	var userRepo pgrepo.UserRepository
+	// ... repo lainnya ...
+	var tokenRepo pgrepo.TokenRepository // <-- Tambahkan variabel ini
+
+	if pgDB != nil {
+		userRepo = pgrepo.NewUserRepository(pgDB)
+		// ... repo lainnya ...
+		tokenRepo = pgrepo.NewTokenRepository(pgDB) // <-- Inisialisasi di sini
+	}
+
+	// Build service repos struct
+	repos := &service.Repos{
+		UserRepo:           userRepo,
+		// ... repo lainnya ...
+		TokenRepo:          tokenRepo, // <-- Masukkan ke struct Repos
+	}
+
+	// Create services
+	service.NewServices(pgDB, mongoDB, repos)
+    
+// ...
 		var err error
 		pgDB, err = db.ConnectPostgres(psqlDsn)
 		if err != nil {
@@ -207,4 +233,5 @@ func main() {
 			log.Println("postgres closed")
 		}
 	}
+	
 }
