@@ -14,6 +14,8 @@ type StudentRepository interface {
 	GetByID(ctx context.Context, id string) (*pgmodel.Student, error)
 	GetByUserID(ctx context.Context, userID string) (*pgmodel.Student, error)
 	ListByAdvisor(ctx context.Context, advisorID string) ([]*pgmodel.Student, error)
+	ListAll(ctx context.Context) ([]*pgmodel.Student, error)
+	UpdateAdvisor(ctx context.Context, studentID string, advisorID *string) error
 }
 
 // Implementation
@@ -70,4 +72,29 @@ func (r *studentRepository) ListByAdvisor(ctx context.Context, advisorID string)
 		out = append(out, &s)
 	}
 	return out, nil
+}
+
+func (r *studentRepository) ListAll(ctx context.Context) ([]*pgmodel.Student, error) {
+	q := `SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at FROM students ORDER BY created_at DESC`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*pgmodel.Student
+	for rows.Next() {
+		var s pgmodel.Student
+		if err := rows.Scan(&s.ID, &s.UserID, &s.StudentID, &s.Program, &s.AcademicYear, &s.AdvisorID, &s.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, &s)
+	}
+	return out, nil
+}
+
+func (r *studentRepository) UpdateAdvisor(ctx context.Context, studentID string, advisorID *string) error {
+	q := `UPDATE students SET advisor_id=$1 WHERE id=$2`
+	_, err := r.db.ExecContext(ctx, q, advisorID, studentID)
+	return err
 }
