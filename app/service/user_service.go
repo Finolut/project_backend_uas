@@ -48,3 +48,14 @@ func (s *UserService) Update(ctx context.Context, u *pgModel.User) error {
 func (s *UserService) Delete(ctx context.Context, id string) error {
 	return s.userRepo.Delete(ctx, id)
 }
+
+func (s *UserService) ListAll(ctx context.Context) ([]*pgModel.User, error) {
+	return s.userRepo.ListAll(ctx)
+}
+
+func (s *UserService) UpdateRole(ctx context.Context, userID string, roleID string) error {
+	if userID == "" || roleID == "" {
+		return errors.New("user_id and role_id are required")
+	}
+	return s.userRepo.UpdateRole(ctx, userID, roleID)
+}
