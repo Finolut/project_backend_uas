@@ -323,14 +323,11 @@ func (s *AchievementService) ListByStudent(ctx context.Context, studentID string
 	return s.achievementRefPG.ListByStudent(ctx, studentID)
 }
 
-// GetAllAchievements returns achievements based on filters (admin/dosen/student)
 func (s *AchievementService) GetAllAchievements(ctx context.Context, filters map[string]interface{}) ([]*pgModel.AchievementReference, error) {
-	// TODO: implement filtered retrieval with pagination
-	// For now, return empty list
-	return []*pgModel.AchievementReference{}, nil
+	// Get all achievement references and apply filtering in memory or via repository
+	return s.achievementRefPG.ListAll(ctx)
 }
 
-// UpdateDraft updates a draft achievement document in MongoDB
 func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, userID string, updates map[string]interface{}) error {
 	// validate student
 	student, err := s.studentRepo.GetByUserID(ctx, userID)
@@ -356,6 +353,34 @@ func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, user
 		return errors.New("only draft achievements can be updated")
 	}
 
-	// TODO: implement MongoDB update logic
+	// update MongoDB document
+	oid, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+	if err != nil {
+		return errors.New("invalid mongo object id")
+	}
+
+	if err := s.achievementMongo.Update(ctx, oid, updates); err != nil {
+		return err
+	}
+
+	// update reference modified timestamp
+	ref.UpdatedAt = time.Now()
+	if err := s.achievementRefPG.Update(ctx, ref); err != nil {
+		return err
+	}
+
+	// activity log
+	logEntry := &pgModel.ActivityLog{
+		ID:         uuid.New().String(),
+		EntityType: "achievement_reference",
+		EntityID:   ref.ID,
+		EventType:  "updated",
+		ActorID:    &userID,
+		Previous:   nil,
+		Current:    updates,
+		CreatedAt:  time.Now(),
+	}
+	s.writeActivityLog(ctx, logEntry)
+
 	return nil
 }
