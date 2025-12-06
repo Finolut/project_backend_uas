@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	pgRepo "app/repository/postgre"
+	pgRepo "clean-arch-copy/app/repository/postgre"
 )
 
 // RBACService checks role permissions

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"clean-arch/app/model/postgre"
+	"clean-arch/clean-arch-copy/app/model/postgre"
 	"strconv"
 	"strings"
 

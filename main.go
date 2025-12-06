@@ -11,8 +11,8 @@ import (
 
 	fiberSwagger "github.com/swaggo/fiber-swagger"
 
-	mongorepo "clean-arch/app/repository/mongo"
-	pgrepo "clean-arch/app/repository/postgre"
+	mongorepo "clean-arch/clean-arch-copy/app/repository/mongo"
+	pgrepo "clean-arch/clean-arch-copy/app/repository/postgre"
 	service "clean-arch/app/service"
 	config "clean-arch/config"
 	db "clean-arch/database"

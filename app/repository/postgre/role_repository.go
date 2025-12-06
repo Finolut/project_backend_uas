@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	pgmodel "app/model/postgre"
+	pgmodel "clean-arch-copy/app/model/postgre"
 )
 
 // -----------------------------

@@ -5,8 +5,8 @@ import (
 
 	mongodriver "go.mongodb.org/mongo-driver/mongo"
 
-	mongoRepo "app/repository/mongo"
-	pgRepo "app/repository/postgre"
+	mongoRepo "clean-arch-copy/app/repository/mongo"
+	pgRepo "clean-arch-copy/app/repository/postgre"
 )
 
 // Repos set of repo interfaces needed to create services

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	model "clean-arch/app/model/postgre"
+	model "clean-arch/clean-arch-copy/app/model/postgre"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"

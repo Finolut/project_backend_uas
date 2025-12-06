@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	pgModel "app/model/postgre"
-	pgRepo "app/repository/postgre"
+	pgModel "clean-arch-copy/app/model/postgre"
+	pgRepo "clean-arch-copy/app/repository/postgre"
 
 	"github.com/google/uuid"
 )

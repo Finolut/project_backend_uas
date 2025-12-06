@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	mongomodel "app/model/mongo"
+	mongomodel "clean-arch-copy/app/model/mongo"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

@@ -1,4 +1,4 @@
-module clean-arch-copy
+module clean-arch-Copy
 
 go 1.24.6
 
