@@ -14,8 +14,9 @@ type AchievementRefRepository interface {
 	UpdateStatus(ctx context.Context, id string, status string, verifierID *string) error
 	GetByID(ctx context.Context, id string) (*pgmodel.AchievementReference, error)
 	ListByStudent(ctx context.Context, studentID string) ([]*pgmodel.AchievementReference, error)
-	// Extra helper: UpdateRejectionNote if needed
 	UpdateRejectionNote(ctx context.Context, id string, note string) error
+	ListAll(ctx context.Context) ([]*pgmodel.AchievementReference, error)
+	Update(ctx context.Context, ref *pgmodel.AchievementReference) error
 }
 
 // Implementation
@@ -91,5 +92,40 @@ func (r *achievementRefRepository) UpdateRejectionNote(ctx context.Context, id s
 	now := time.Now()
 	q := `UPDATE achievement_references SET rejection_note=$1, status='rejected', updated_at=$2 WHERE id=$3`
 	_, err := r.db.ExecContext(ctx, q, note, now, id)
+	return err
+}
+
+func (r *achievementRefRepository) ListAll(ctx context.Context) ([]*pgmodel.AchievementReference, error) {
+	q := `SELECT id, student_id, mongo_achievement_id, status, submitted_at, verified_at, verified_by, rejection_note, created_at, updated_at
+	      FROM achievement_references ORDER BY created_at DESC`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*pgmodel.AchievementReference
+	for rows.Next() {
+		var item pgmodel.AchievementReference
+		if err := rows.Scan(&item.ID, &item.StudentID, &item.MongoAchievementID, &item.Status,
+			&item.SubmittedAt, &item.VerifiedAt, &item.VerifiedBy, &item.RejectionNote, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, &item)
+	}
+	return out, nil
+}
+
+func (r *achievementRefRepository) Update(ctx context.Context, ref *pgmodel.AchievementReference) error {
+	now := time.Now()
+	ref.UpdatedAt = now
+	q := `UPDATE achievement_references 
+	      SET student_id=$1, mongo_achievement_id=$2, status=$3, submitted_at=$4, verified_at=$5, 
+	          verified_by=$6, rejection_note=$7, updated_at=$8 
+	      WHERE id=$9`
+	_, err := r.db.ExecContext(ctx, q,
+		ref.StudentID, ref.MongoAchievementID, ref.Status, ref.SubmittedAt, ref.VerifiedAt,
+		ref.VerifiedBy, ref.RejectionNote, ref.UpdatedAt, ref.ID,
+	)
 	return err
 }
