@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"clean-arch/config"
+	"clean-arch-copy/config"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"

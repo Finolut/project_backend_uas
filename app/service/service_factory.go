@@ -19,6 +19,7 @@ type Repos struct {
 	LecturerRepo       pgRepo.LecturerRepository
 	AchievementRefRepo pgRepo.AchievementRefRepository
 	AchievementRepo    mongoRepo.AchievementRepository
+	ActivityLogRepo    pgRepo.ActivityLogRepository // <-- WAJIB ada
 }
 
 type Services struct {
@@ -31,10 +32,18 @@ type Services struct {
 }
 
 func NewServices(db *sql.DB, mongoDB *mongodriver.Database, repos *Repos) *Services {
-	// if repos nil, create default repo impls elsewhere (not included)
-	achSvc := NewAchievementService(repos.AchievementRepo, repos.AchievementRefRepo, repos.StudentRepo, repos.UserRepo)
+	// TODO: kalau mau, tambahkan logic bikin default repos kalau repos == nil
+
+	achSvc := NewAchievementService(
+		repos.AchievementRepo,
+		repos.AchievementRefRepo,
+		repos.StudentRepo,
+		repos.UserRepo,
+		repos.ActivityLogRepo, // <-- argumen ke-5, ini yang diminta compiler
+	)
+
 	userSvc := NewUserService(repos.UserRepo)
-	authSvc := NewAuthService(repos.UserRepo) // needs user repo for login
+	authSvc := NewAuthService(repos.UserRepo)
 	rbacSvc := NewRBACService(repos.RolePermissionRepo, repos.PermissionRepo, repos.RoleRepo)
 	studentSvc := NewStudentService(repos.StudentRepo)
 	lecturerSvc := NewLecturerService(repos.LecturerRepo)

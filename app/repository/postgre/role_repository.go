@@ -31,15 +31,16 @@ func NewRoleRepository(db *sql.DB) RoleRepository {
 
 func (r *roleRepository) Create(ctx context.Context, role *pgmodel.Role) error {
 	role.CreatedAt = time.Now()
-	query := `
-		INSERT INTO roles (id, name, description, created_at)
-		VALUES ($1,$2,$3,$4)
-	`
+
 	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO roles (id, name, description, created_at)
+		 VALUES ($1,$2,$3,$4)`,
 		role.ID, role.Name, role.Description, role.CreatedAt,
 	)
+
 	return err
 }
+
 
 func (r *roleRepository) GetByID(ctx context.Context, id string) (*pgmodel.Role, error) {
 	query := `
