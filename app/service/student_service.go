@@ -35,3 +35,18 @@ func (s *StudentService) GetByUserID(ctx context.Context, userID string) (*pgMod
 func (s *StudentService) ListByAdvisor(ctx context.Context, advisorID string) ([]*pgModel.Student, error) {
 	return s.repo.ListByAdvisor(ctx, advisorID)
 }
+
+func (s *StudentService) ListAll(ctx context.Context) ([]*pgModel.Student, error) {
+	return s.repo.ListAll(ctx)
+}
+
+func (s *StudentService) UpdateAdvisor(ctx context.Context, studentID string, advisorID *string) error {
+	if studentID == "" {
+		return errors.New("student_id is required")
+	}
+	return s.repo.UpdateAdvisor(ctx, studentID, advisorID)
+}
+
+func (s *StudentService) GetByID(ctx context.Context, studentID string) (*pgModel.Student, error) {
+	return s.repo.GetByID(ctx, studentID)
+}
