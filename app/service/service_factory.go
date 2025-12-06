@@ -19,7 +19,8 @@ type Repos struct {
 	LecturerRepo       pgRepo.LecturerRepository
 	AchievementRefRepo pgRepo.AchievementRefRepository
 	AchievementRepo    mongoRepo.AchievementRepository
-	ActivityLogRepo    pgRepo.ActivityLogRepository // <-- WAJIB ada
+	ActivityLogRepo    pgRepo.ActivityLogRepository
+	TokenRepo          TokenRepository // <-- Tambahan: Interface dari auth_service.go
 }
 
 type Services struct {
@@ -29,6 +30,7 @@ type Services struct {
 	RBAC        *RBACService
 	Student     *StudentService
 	Lecturer    *LecturerService
+	Report      *ReportService // <-- Tambahan: Report Service
 }
 
 func NewServices(db *sql.DB, mongoDB *mongodriver.Database, repos *Repos) *Services {
@@ -39,14 +41,24 @@ func NewServices(db *sql.DB, mongoDB *mongodriver.Database, repos *Repos) *Servi
 		repos.AchievementRefRepo,
 		repos.StudentRepo,
 		repos.UserRepo,
-		repos.ActivityLogRepo, // <-- argumen ke-5, ini yang diminta compiler
+		repos.ActivityLogRepo,
 	)
 
 	userSvc := NewUserService(repos.UserRepo)
-	authSvc := NewAuthService(repos.UserRepo)
+	
+	// Update: Inject TokenRepo ke AuthService
+	authSvc := NewAuthService(repos.UserRepo, repos.TokenRepo)
+	
 	rbacSvc := NewRBACService(repos.RolePermissionRepo, repos.PermissionRepo, repos.RoleRepo)
 	studentSvc := NewStudentService(repos.StudentRepo)
 	lecturerSvc := NewLecturerService(repos.LecturerRepo)
+
+	// Tambahan: Wiring ReportService
+	reportSvc := NewReportService(
+		repos.AchievementRefRepo,
+		repos.StudentRepo,
+		repos.LecturerRepo,
+	)
 
 	return &Services{
 		Achievement: achSvc,
@@ -55,5 +67,6 @@ func NewServices(db *sql.DB, mongoDB *mongodriver.Database, repos *Repos) *Servi
 		RBAC:        rbacSvc,
 		Student:     studentSvc,
 		Lecturer:    lecturerSvc,
+		Report:      reportSvc,
 	}
 }

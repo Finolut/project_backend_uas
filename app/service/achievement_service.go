@@ -324,8 +324,9 @@ func (s *AchievementService) ListByStudent(ctx context.Context, studentID string
 }
 
 func (s *AchievementService) GetAllAchievements(ctx context.Context, filters map[string]interface{}) ([]*pgModel.AchievementReference, error) {
-	// Get all achievement references and apply filtering in memory or via repository
-	return s.achievementRefPG.ListAll(ctx)
+    // Saat ini repo hanya punya ListAll tanpa filter dinamis, 
+    // Anda bisa update repository untuk menerima filter, atau ambil semua dulu (jika data sedikit).
+    return s.achievementRefPG.ListAll(ctx)
 }
 
 func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, userID string, updates map[string]interface{}) error {
@@ -355,19 +356,20 @@ func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, user
 
 	// update MongoDB document
 	oid, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
-	if err != nil {
-		return errors.New("invalid mongo object id")
-	}
+if err != nil {
+    return errors.New("invalid mongo object id")
+}
 
-	if err := s.achievementMongo.Update(ctx, oid, updates); err != nil {
-		return err
-	}
+// Update MongoDB
+if err := s.achievementMongo.Update(ctx, oid, updates); err != nil {
+    return err
+}
 
-	// update reference modified timestamp
-	ref.UpdatedAt = time.Now()
-	if err := s.achievementRefPG.Update(ctx, ref); err != nil {
-		return err
-	}
+// Update Timestamp Postgres
+ref.UpdatedAt = time.Now()
+if err := s.achievementRefPG.Update(ctx, ref); err != nil {
+    return err
+}
 
 	// activity log
 	logEntry := &pgModel.ActivityLog{
@@ -382,5 +384,6 @@ func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, user
 	}
 	s.writeActivityLog(ctx, logEntry)
 
+	
 	return nil
 }

@@ -108,9 +108,10 @@ func (s *ReportService) GetStudentStatistics(ctx context.Context, studentID stri
 }
 
 func (s *ReportService) GetAchievementHistory(ctx context.Context, refID string) (map[string]interface{}, error) {
-	// TODO: Implement achievement history retrieval from activity log
-	// This will show status transitions and updates over time
-	return map[string]interface{}{}, nil
+    // Gunakan activityLogRepo (pastikan struct ReportService punya field activityLogRepo)
+    // logs, err := s.activityLogRepo.ListByEntity(ctx, "achievement_reference", refID, 100, 0)
+    // return map[string]interface{}{"history": logs}, err
+    return map[string]interface{}{}, nil // Placeholder sampai repo di-inject
 }
 
 var ErrNotFound = &CustomError{"resource_not_found", "resource not found", 404}
