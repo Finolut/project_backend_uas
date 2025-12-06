@@ -19,8 +19,8 @@ type Repos struct {
 	LecturerRepo       pgRepo.LecturerRepository
 	AchievementRefRepo pgRepo.AchievementRefRepository
 	AchievementRepo    mongoRepo.AchievementRepository
-	ActivityLogRepo    pgRepo.ActivityLogRepository
-	TokenRepo          TokenRepository // <-- Tambahan: Interface dari auth_service.go
+	ActivityLogRepo    pgRepo.ActivityLogRepository // Pastikan ini ada
+	TokenRepo          TokenRepository
 }
 
 type Services struct {
@@ -30,11 +30,11 @@ type Services struct {
 	RBAC        *RBACService
 	Student     *StudentService
 	Lecturer    *LecturerService
-	Report      *ReportService // <-- Tambahan: Report Service
+	Report      *ReportService
 }
 
 func NewServices(db *sql.DB, mongoDB *mongodriver.Database, repos *Repos) *Services {
-	// TODO: kalau mau, tambahkan logic bikin default repos kalau repos == nil
+	// ... (kode lain tetap sama)
 
 	achSvc := NewAchievementService(
 		repos.AchievementRepo,
@@ -45,19 +45,17 @@ func NewServices(db *sql.DB, mongoDB *mongodriver.Database, repos *Repos) *Servi
 	)
 
 	userSvc := NewUserService(repos.UserRepo)
-	
-	// Update: Inject TokenRepo ke AuthService
 	authSvc := NewAuthService(repos.UserRepo, repos.TokenRepo)
-	
 	rbacSvc := NewRBACService(repos.RolePermissionRepo, repos.PermissionRepo, repos.RoleRepo)
 	studentSvc := NewStudentService(repos.StudentRepo)
 	lecturerSvc := NewLecturerService(repos.LecturerRepo)
 
-	// Tambahan: Wiring ReportService
+	// Update Wiring ReportService disini:
 	reportSvc := NewReportService(
 		repos.AchievementRefRepo,
 		repos.StudentRepo,
 		repos.LecturerRepo,
+		repos.ActivityLogRepo, // <-- Masukkan dependency ActivityLogRepo
 	)
 
 	return &Services{

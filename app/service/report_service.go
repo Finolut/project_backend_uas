@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sort"
 
 	pgRepo "clean-arch-copy/app/repository/postgre"
 )
@@ -11,17 +12,21 @@ type ReportService struct {
 	achievementRefRepo pgRepo.AchievementRefRepository
 	studentRepo        pgRepo.StudentRepository
 	lecturerRepo       pgRepo.LecturerRepository
+	activityLogRepo    pgRepo.ActivityLogRepository // <-- Tambahkan ini
 }
 
+// Update Constructor: Tambahkan parameter activityLogRepo
 func NewReportService(
 	achievementRefRepo pgRepo.AchievementRefRepository,
 	studentRepo pgRepo.StudentRepository,
 	lecturerRepo pgRepo.LecturerRepository,
+	activityLogRepo pgRepo.ActivityLogRepository, // <-- Tambahkan parameter
 ) *ReportService {
 	return &ReportService{
 		achievementRefRepo: achievementRefRepo,
 		studentRepo:        studentRepo,
 		lecturerRepo:       lecturerRepo,
+		activityLogRepo:    activityLogRepo, // <-- Assign
 	}
 }
 
@@ -29,28 +34,86 @@ func NewReportService(
 type AchievementStatistics struct {
 	TotalAchievements    int              `json:"total_achievements"`
 	AchievementsByStatus map[string]int   `json:"achievements_by_status"`
-	AchievementsByType   map[string]int   `json:"achievements_by_type"`
 	TopStudents          []TopStudentData `json:"top_students"`
 	VerificationRate     float64          `json:"verification_rate"`
 }
 
 type TopStudentData struct {
 	StudentID        string `json:"student_id"`
-	StudentName      string `json:"student_name"`
+	StudentName      string `json:"student_name"` // Note: Nama mungkin butuh fetch terpisah jika tidak join
 	AchievementCount int    `json:"achievement_count"`
 }
 
 // GetAllAchievementsStatistics returns overall statistics for all achievements
 func (s *ReportService) GetAllAchievementsStatistics(ctx context.Context) (*AchievementStatistics, error) {
+	// 1. Ambil semua data (untuk skala besar, sebaiknya gunakan Query COUNT/GROUP BY di repository)
+	refs, err := s.achievementRefRepo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	stats := &AchievementStatistics{
 		AchievementsByStatus: make(map[string]int),
-		AchievementsByType:   make(map[string]int),
 		TopStudents:          []TopStudentData{},
 	}
 
-	// TODO: Implement actual statistics calculation using database queries
-	// This requires repository methods to fetch and aggregate data
-	// For now, returning empty statistics structure
+	stats.TotalAchievements = len(refs)
+	verifiedCount := 0
+	studentCounts := make(map[string]int)
+
+	// 2. Agregasi Data in-memory
+	for _, ref := range refs {
+		// Hitung per status
+		stats.AchievementsByStatus[ref.Status]++
+
+		// Hitung verified
+		if ref.Status == "verified" {
+			verifiedCount++
+		}
+
+		// Hitung per mahasiswa
+		studentCounts[ref.StudentID]++
+	}
+
+	// 3. Hitung Rate
+	if stats.TotalAchievements > 0 {
+		stats.VerificationRate = float64(verifiedCount) / float64(stats.TotalAchievements)
+	}
+
+	// 4. Cari Top 5 Students
+	// Konversi map ke slice untuk sorting
+	type kv struct {
+		Key   string
+		Value int
+	}
+	var ss []kv
+	for k, v := range studentCounts {
+		ss = append(ss, kv{k, v})
+	}
+
+	// Sort descending berdasarkan jumlah prestasi
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i].Value > ss[j].Value
+	})
+
+	// Ambil top 5
+	limit := 5
+	if len(ss) < limit {
+		limit = len(ss)
+	}
+
+	for i := 0; i < limit; i++ {
+		// Optional: Fetch nama student jika diperlukan
+		// st, _ := s.studentRepo.GetByID(ctx, ss[i].Key)
+		// name := "Unknown"
+		// if st != nil { name = st.StudentID } // Atau fetch user untuk nama asli
+
+		stats.TopStudents = append(stats.TopStudents, TopStudentData{
+			StudentID:        ss[i].Key,
+			StudentName:      ss[i].Key, // Gunakan ID dulu untuk efisiensi
+			AchievementCount: ss[i].Value,
+		})
+	}
 
 	return stats, nil
 }
@@ -107,11 +170,19 @@ func (s *ReportService) GetStudentStatistics(ctx context.Context, studentID stri
 	return result, nil
 }
 
+// GetAchievementHistory retrieves activity logs for a specific achievement reference
 func (s *ReportService) GetAchievementHistory(ctx context.Context, refID string) (map[string]interface{}, error) {
-    // Gunakan activityLogRepo (pastikan struct ReportService punya field activityLogRepo)
-    // logs, err := s.activityLogRepo.ListByEntity(ctx, "achievement_reference", refID, 100, 0)
-    // return map[string]interface{}{"history": logs}, err
-    return map[string]interface{}{}, nil // Placeholder sampai repo di-inject
+	// Panggil repository activity log
+	logs, err := s.activityLogRepo.ListByEntity(ctx, "achievement_reference", refID, 100, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Bungkus dalam map agar format JSON rapi: { "history": [...] }
+	return map[string]interface{}{
+		"entity_id": refID,
+		"history":   logs,
+	}, nil
 }
 
 var ErrNotFound = &CustomError{"resource_not_found", "resource not found", 404}
