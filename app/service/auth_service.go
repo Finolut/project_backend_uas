@@ -62,3 +62,47 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (str
 	}
 	return ss, user, nil
 }
+
+func (s *AuthService) Refresh(ctx context.Context, userID string) (string, error) {
+	if userID == "" {
+		return "", errors.New("user_id is required")
+	}
+	claims := jwt.MapClaims{
+		"sub": userID,
+		"exp": time.Now().Add(24 * time.Hour).Unix(),
+		"iat": time.Now().Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString([]byte(s.jwtSecret))
+	return ss, err
+}
+
+func (s *AuthService) Logout(ctx context.Context, userID string) error {
+	if userID == "" {
+		return errors.New("user_id is required")
+	}
+	// TODO: implement token blacklist or revocation mechanism
+	// For now, this is a placeholder for future implementation
+	return nil
+}
+
+func (s *AuthService) VerifyToken(tokenString string) (map[string]interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(s.jwtSecret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		return claims, nil
+	}
+	return nil, errors.New("invalid token claims")
+}
