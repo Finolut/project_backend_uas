@@ -14,6 +14,7 @@ type LecturerRepository interface {
 	GetByID(ctx context.Context, id string) (*pgmodel.Lecturer, error)
 	GetByUserID(ctx context.Context, userID string) (*pgmodel.Lecturer, error)
 	ListAll(ctx context.Context) ([]*pgmodel.Lecturer, error)
+	GetAdvisees(ctx context.Context, lecturerID string) ([]*pgmodel.Student, error)
 }
 
 // Implementation
@@ -67,6 +68,26 @@ func (r *lecturerRepository) ListAll(ctx context.Context) ([]*pgmodel.Lecturer, 
 			return nil, err
 		}
 		out = append(out, &l)
+	}
+	return out, nil
+}
+
+func (r *lecturerRepository) GetAdvisees(ctx context.Context, lecturerID string) ([]*pgmodel.Student, error) {
+	q := `SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at 
+	      FROM students WHERE advisor_id=$1 ORDER BY created_at DESC`
+	rows, err := r.db.QueryContext(ctx, q, lecturerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*pgmodel.Student
+	for rows.Next() {
+		var s pgmodel.Student
+		if err := rows.Scan(&s.ID, &s.UserID, &s.StudentID, &s.Program, &s.AcademicYear, &s.AdvisorID, &s.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, &s)
 	}
 	return out, nil
 }
