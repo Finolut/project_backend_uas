@@ -317,3 +317,45 @@ func (s *AchievementService) GetDetail(ctx context.Context, refID string) (*mong
 	}
 	return ach, ref, nil
 }
+
+// ListByStudent returns all achievements for a student
+func (s *AchievementService) ListByStudent(ctx context.Context, studentID string) ([]*pgModel.AchievementReference, error) {
+	return s.achievementRefPG.ListByStudent(ctx, studentID)
+}
+
+// GetAllAchievements returns achievements based on filters (admin/dosen/student)
+func (s *AchievementService) GetAllAchievements(ctx context.Context, filters map[string]interface{}) ([]*pgModel.AchievementReference, error) {
+	// TODO: implement filtered retrieval with pagination
+	// For now, return empty list
+	return []*pgModel.AchievementReference{}, nil
+}
+
+// UpdateDraft updates a draft achievement document in MongoDB
+func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, userID string, updates map[string]interface{}) error {
+	// validate student
+	student, err := s.studentRepo.GetByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if student == nil {
+		return errors.New("student not found")
+	}
+
+	// get reference
+	ref, err := s.achievementRefPG.GetByID(ctx, refID)
+	if err != nil {
+		return err
+	}
+	if ref == nil {
+		return errors.New("achievement reference not found")
+	}
+	if ref.StudentID != student.ID {
+		return errors.New("not owner")
+	}
+	if ref.Status != "draft" {
+		return errors.New("only draft achievements can be updated")
+	}
+
+	// TODO: implement MongoDB update logic
+	return nil
+}

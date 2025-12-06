@@ -32,6 +32,10 @@ func (s *LecturerService) GetByUserID(ctx context.Context, userID string) (*pgMo
 	return s.repo.GetByUserID(ctx, userID)
 }
 
+func (s *LecturerService) GetByID(ctx context.Context, id string) (*pgModel.Lecturer, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
 func (s *LecturerService) ListAll(ctx context.Context) ([]*pgModel.Lecturer, error) {
 	return s.repo.ListAll(ctx)
 }
