@@ -39,3 +39,7 @@ func (s *LecturerService) GetByID(ctx context.Context, id string) (*pgModel.Lect
 func (s *LecturerService) ListAll(ctx context.Context) ([]*pgModel.Lecturer, error) {
 	return s.repo.ListAll(ctx)
 }
+
+func (s *LecturerService) GetAdvisees(ctx context.Context, lecturerID string) ([]*pgModel.Student, error) {
+	return s.repo.GetAdvisees(ctx, lecturerID)
+}
