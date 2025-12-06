@@ -7,34 +7,49 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-
-	mdl "clean-arch-copy/app/model/postgre"
-	"clean-arch-copy/utils" // keep GenerateToken in utils
 )
 
+// Errors exposed by this package
 var (
 	ErrTokenExpired   = errors.New("token expired")
 	ErrTokenInvalid   = errors.New("invalid token")
 	ErrTokenBadMethod = errors.New("unexpected signing method")
 )
 
-// parseToken verifies and returns *mdl.JWTClaims (uses jwt package).
-// This duplicates earlier ValidateToken logic but placed inside middleware package.
+// Locals keys for fiber.Ctx.Locals
+const (
+	LocalsUserID    = "user_id"
+	LocalsRoleID    = "role_id"
+	LocalsRoleName  = "role_name"
+	LocalsJWTClaims = "jwt_claims"
+)
+
+// JWTClaims used by ParseAndValidateToken and middleware.
+// If you already have a JWTClaims struct in your model package, you can
+// replace this with that type (and remove this type here).
+type JWTClaims struct {
+	UserID   string `json:"user_id"`
+	RoleID   string `json:"role_id,omitempty"`
+	RoleName string `json:"role_name,omitempty"`
+	jwt.RegisteredClaims
+}
+
+// ParseAndValidateToken verifies and returns *JWTClaims (uses jwt package).
 // Returns typed claims or error.
-func ParseAndValidateToken(tokenString string) (*mdl.JWTClaims, error) {
-	claims := &mdl.JWTClaims{}
+func ParseAndValidateToken(tokenString string) (*JWTClaims, error) {
+	claims := &JWTClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
 		// enforce HMAC signing method
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrTokenBadMethod
 		}
-		// use utils' secret getter so secrets come from env
-		return utils.GetJWTSecretBytes(), nil
+		// GetJWTSecretBytes is assumed to exist elsewhere in this package.
+		// It should return the HMAC secret as []byte, e.g. []byte(os.Getenv("JWT_SECRET"))
+		return GetJWTSecretBytes(), nil
 	}, jwt.WithLeeway(5*time.Second))
 	if err != nil {
-		// inspect error for expiry
-		var ve *jwt.ValidationError
-		if errors.As(err, &ve) && ve.Errors&jwt.ValidationErrorExpired != 0 {
+		// jwt/v5 exposes jwt.ErrTokenExpired which can be matched with errors.Is
+		if errors.Is(err, jwt.ErrTokenExpired) {
 			return nil, ErrTokenExpired
 		}
 		return nil, err
@@ -43,6 +58,10 @@ func ParseAndValidateToken(tokenString string) (*mdl.JWTClaims, error) {
 		return nil, ErrTokenInvalid
 	}
 	return claims, nil
+}
+
+func GetJWTSecretBytes() interface{} {
+	panic("unimplemented")
 }
 
 // Helper: extract Bearer token from Authorization header
@@ -61,6 +80,7 @@ func extractTokenFromHeader(auth string) (string, error) {
 // - "user_id" -> user ID (string)
 // - "role_id" -> role ID (string) [if present]
 // - "role_name" -> role name (string) [if present]
+// - "jwt_claims" -> whole claims object
 func NewJWTMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		auth := c.Get("Authorization")
@@ -86,10 +106,10 @@ func NewJWTMiddleware() fiber.Handler {
 			c.Locals(LocalsRoleID, claims.RoleID)
 		}
 		if claims.RoleName != "" {
-			c.Locals("role_name", claims.RoleName)
+			c.Locals(LocalsRoleName, claims.RoleName)
 		}
 		// also store whole claims for handlers that want them
-		c.Locals("jwt_claims", claims)
+		c.Locals(LocalsJWTClaims, claims)
 
 		return c.Next()
 	}
