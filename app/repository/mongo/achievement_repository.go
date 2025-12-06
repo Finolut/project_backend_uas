@@ -17,10 +17,8 @@ import (
 type AchievementRepository interface {
 	Create(ctx context.Context, a *mongomodel.Achievement) (primitive.ObjectID, error)
 	GetByID(ctx context.Context, id primitive.ObjectID) (*mongomodel.Achievement, error)
-	Update(ctx context.Context, a *mongomodel.Achievement) error
+	Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error
 	SoftDelete(ctx context.Context, id primitive.ObjectID) error
-
-	// Optional helpers
 	ListByStudent(ctx context.Context, studentID string, limit, offset int64) ([]*mongomodel.Achievement, error)
 }
 
@@ -94,14 +92,19 @@ func (r *achievementRepo) GetByID(ctx context.Context, id primitive.ObjectID) (*
 	return &out, nil
 }
 
-// Update replaces the whole document (caller must ensure ID present)
-func (r *achievementRepo) Update(ctx context.Context, a *mongomodel.Achievement) error {
-	if a.ID.IsZero() {
-		return errors.New("missing achievement ID")
+func (r *achievementRepo) Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error {
+	now := time.Now()
+	updates["updatedAt"] = now
+	
+	update := bson.M{"$set": updates}
+	res, err := r.col.UpdateOne(ctx, bson.M{"_id": id}, update)
+	if err != nil {
+		return err
 	}
-	a.UpdatedAt = time.Now()
-	_, err := r.col.ReplaceOne(ctx, bson.M{"_id": a.ID}, a)
-	return err
+	if res.MatchedCount == 0 {
+		return driver.ErrNoDocuments
+	}
+	return nil
 }
 
 // SoftDelete sets deletedAt timestamp instead of physically deleting
