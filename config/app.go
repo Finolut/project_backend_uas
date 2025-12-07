@@ -19,9 +19,11 @@ func NewFiberApp(logWriter ...interface{}) *fiber.App {
 	// Recover from panics
 	app.Use(recover.New())
 
-	// CORS: adjust as needed
+// CORS: adjust as needed
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
+		// Ganti "*" dengan alamat frontend yang spesifik. 
+        // Jika ada banyak, pisahkan dengan koma: "http://localhost:3000,http://localhost:5173"
+		AllowOrigins:     "http://localhost:3000", 
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
 	}))
