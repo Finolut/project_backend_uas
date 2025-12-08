@@ -324,9 +324,9 @@ func (s *AchievementService) ListByStudent(ctx context.Context, studentID string
 }
 
 func (s *AchievementService) GetAllAchievements(ctx context.Context, filters map[string]interface{}) ([]*pgModel.AchievementReference, error) {
-    // Saat ini repo hanya punya ListAll tanpa filter dinamis, 
-    // Anda bisa update repository untuk menerima filter, atau ambil semua dulu (jika data sedikit).
-    return s.achievementRefPG.ListAll(ctx)
+	// Saat ini repo hanya punya ListAll tanpa filter dinamis,
+	// Anda bisa update repository untuk menerima filter, atau ambil semua dulu (jika data sedikit).
+	return s.achievementRefPG.ListAll(ctx)
 }
 
 func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, userID string, updates map[string]interface{}) error {
@@ -356,20 +356,20 @@ func (s *AchievementService) UpdateDraft(ctx context.Context, refID string, user
 
 	// update MongoDB document
 	oid, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
-if err != nil {
-    return errors.New("invalid mongo object id")
-}
+	if err != nil {
+		return errors.New("invalid mongo object id")
+	}
 
-// Update MongoDB
-if err := s.achievementMongo.Update(ctx, oid, updates); err != nil {
-    return err
-}
+	// Update MongoDB
+	if err := s.achievementMongo.Update(ctx, oid, updates); err != nil {
+		return err
+	}
 
-// Update Timestamp Postgres
-ref.UpdatedAt = time.Now()
-if err := s.achievementRefPG.Update(ctx, ref); err != nil {
-    return err
-}
+	// Update Timestamp Postgres
+	ref.UpdatedAt = time.Now()
+	if err := s.achievementRefPG.Update(ctx, ref); err != nil {
+		return err
+	}
 
 	// activity log
 	logEntry := &pgModel.ActivityLog{
@@ -384,6 +384,42 @@ if err := s.achievementRefPG.Update(ctx, ref); err != nil {
 	}
 	s.writeActivityLog(ctx, logEntry)
 
-	
 	return nil
+}
+
+// Method baru untuk handle logika attachment
+func (s *AchievementService) AddAttachment(ctx context.Context, refID string, userID string, fileData mongoModel.Attachment) error {
+	// 1. Cek Reference di Postgres
+	ref, err := s.achievementRefPG.GetByID(ctx, refID)
+	if err != nil {
+		return err
+	}
+	if ref == nil {
+		return errors.New("achievement not found")
+	}
+
+	// 2. Validasi Owner (Hanya pemilik yang boleh upload)
+	// Note: Jika student_id di table students berbeda dengan user_id,
+	// Anda mungkin perlu fetch Student dulu seperti di CreateDraft.
+	// Asumsi: Logic validasi owner user -> student sudah benar
+	student, err := s.studentRepo.GetByUserID(ctx, userID)
+	if err != nil || student == nil {
+		return errors.New("unauthorized student")
+	}
+	if ref.StudentID != student.ID {
+		return errors.New("you are not the owner of this achievement")
+	}
+
+	// 3. Validasi Status (Hanya boleh edit jika Draft)
+	if ref.Status != "draft" {
+		return errors.New("cannot add attachment to submitted/verified achievement")
+	}
+
+	// 4. Update MongoDB
+	oid, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+	if err != nil {
+		return errors.New("invalid mongo id")
+	}
+
+	return s.achievementMongo.AddAttachment(ctx, oid, fileData)
 }

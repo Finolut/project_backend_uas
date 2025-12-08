@@ -20,6 +20,7 @@ type AchievementRepository interface {
 	Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error
 	SoftDelete(ctx context.Context, id primitive.ObjectID) error
 	ListByStudent(ctx context.Context, studentID string, limit, offset int64) ([]*mongomodel.Achievement, error)
+	AddAttachment(ctx context.Context, id primitive.ObjectID, attachment mongomodel.Attachment) error
 }
 
 // --------------------------
@@ -27,6 +28,16 @@ type AchievementRepository interface {
 // --------------------------
 type achievementRepo struct {
 	col *driver.Collection
+}
+
+func (r *achievementRepo) AddAttachment(ctx context.Context, id primitive.ObjectID, attachment mongomodel.Attachment) error {
+    filter := bson.M{"_id": id}
+    update := bson.M{
+        "$push": bson.M{"attachments": attachment},
+        "$set":  bson.M{"updatedAt": time.Now()},
+    }
+    _, err := r.col.UpdateOne(ctx, filter, update)
+    return err
 }
 
 // NewAchievementRepository creates repository and ensures indexes
@@ -95,7 +106,7 @@ func (r *achievementRepo) GetByID(ctx context.Context, id primitive.ObjectID) (*
 func (r *achievementRepo) Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error {
 	now := time.Now()
 	updates["updatedAt"] = now
-	
+
 	update := bson.M{"$set": updates}
 	res, err := r.col.UpdateOne(ctx, bson.M{"_id": id}, update)
 	if err != nil {

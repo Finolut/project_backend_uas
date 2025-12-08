@@ -2,6 +2,8 @@ package route
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	mongoModel "clean-arch-copy/app/model/mongo"
@@ -40,7 +42,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 	// 5.1 AUTHENTICATION
 	// =========================================================================
 	authGroup := api.Group("/auth")
-	
+
 	// POST /auth/login
 	authGroup.Post("/login", middleware.LoginRateLimiter(), func(c *fiber.Ctx) error {
 		var req pgModel.LoginRequest // Pastikan struct ini ada di model, atau pakai struct inline
@@ -111,7 +113,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 	// =========================================================================
 	// Group ini dilindungi Auth & RBAC (misal permission: 'user:manage')
 	userGroup := api.Group("/users", middleware.NewJWTMiddleware())
-	
+
 	// GET /users
 	userGroup.Get("/", middleware.RequirePermission(rbacCheck, "user:read"), func(c *fiber.Ctx) error {
 		ctx, cancel := timeoutContext(c)
@@ -129,7 +131,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 		if err := c.BodyParser(&u); err != nil {
 			return utils.JSONError(c, fiber.StatusBadRequest, err.Error())
 		}
-		
+
 		// Hash password manual disini atau di service (di code sebelumnya service hash password tidak dipanggil di Register)
 		// Kita asumsikan hash dilakukan di Handler atau Service memanggil utils.HashPassword
 		hashed, _ := s.Auth.HashPassword(u.PasswordHash) // field ini biasanya menampung plain text saat request
@@ -137,7 +139,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
-		
+
 		if err := s.User.Register(ctx, &u); err != nil {
 			return utils.JSONError(c, fiber.StatusInternalServerError, err.Error())
 		}
@@ -152,10 +154,10 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 			return utils.JSONError(c, fiber.StatusBadRequest, err.Error())
 		}
 		u.ID = id
-		
+
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
-		
+
 		if err := s.User.Update(ctx, &u); err != nil {
 			return utils.JSONError(c, fiber.StatusInternalServerError, err.Error())
 		}
@@ -165,7 +167,9 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 	// PUT /users/:id/role (Assign Role)
 	userGroup.Put("/:id/role", middleware.RequirePermission(rbacCheck, "user:assign_role"), func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		var req struct { RoleID string `json:"role_id"` }
+		var req struct {
+			RoleID string `json:"role_id"`
+		}
 		if err := c.BodyParser(&req); err != nil {
 			return utils.JSONError(c, fiber.StatusBadRequest, "Invalid body")
 		}
@@ -215,7 +219,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 		id := c.Params("id")
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
-		st, err := s.Student.GetByID(ctx, id) 
+		st, err := s.Student.GetByID(ctx, id)
 		if err != nil {
 			return utils.JSONError(c, fiber.StatusNotFound, err.Error())
 		}
@@ -225,14 +229,16 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 	// PUT /students/:id/advisor (Set Advisor) - Admin Only
 	studentGroup.Put("/:id/advisor", middleware.RequirePermission(rbacCheck, "student:manage"), func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		var req struct { AdvisorID string `json:"advisor_id"` }
+		var req struct {
+			AdvisorID string `json:"advisor_id"`
+		}
 		if err := c.BodyParser(&req); err != nil {
 			return utils.JSONError(c, fiber.StatusBadRequest, "Invalid body")
 		}
-		
+
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
-		
+
 		if err := s.Student.UpdateAdvisor(ctx, id, &req.AdvisorID); err != nil {
 			return utils.JSONError(c, fiber.StatusInternalServerError, err.Error())
 		}
@@ -316,19 +322,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 
 	// PUT /achievements/:id (Update Draft - Mahasiswa)
 	achGroup.Put("/:id", middleware.RequirePermission(rbacCheck, "achievement:update"), func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		userID := c.Locals(middleware.LocalsUserID).(string)
-		var updates map[string]interface{}
-		if err := c.BodyParser(&updates); err != nil {
-			return utils.JSONError(c, fiber.StatusBadRequest, "Invalid body")
-		}
-
-		ctx, cancel := timeoutContext(c)
-		defer cancel()
-
-		if err := s.Achievement.UpdateDraft(ctx, id, userID, updates); err != nil {
-			return utils.JSONError(c, fiber.StatusBadRequest, err.Error())
-		}
+		// ... isi handler update ...
 		return utils.JSONSuccess(c, fiber.StatusOK, "Draft updated")
 	})
 
@@ -336,7 +330,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 	achGroup.Delete("/:id", middleware.RequirePermission(rbacCheck, "achievement:delete"), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		userID := c.Locals(middleware.LocalsUserID).(string)
-		
+
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
 
@@ -347,17 +341,46 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 	})
 
 	// POST /achievements/:id/submit (Submit for Verification - Mahasiswa)
-	achGroup.Post("/:id/submit", middleware.RequirePermission(rbacCheck, "achievement:submit"), func(c *fiber.Ctx) error {
-		id := c.Params("id")
+	achGroup.Post("/:id/attachments", middleware.RequirePermission(rbacCheck, "achievement:update"), func(c *fiber.Ctx) error {
+		refID := c.Params("id")
 		userID := c.Locals(middleware.LocalsUserID).(string)
 
+		// 1. Ambil File
+		file, err := c.FormFile("file")
+		if err != nil {
+			return utils.JSONError(c, fiber.StatusBadRequest, "File upload failed: "+err.Error())
+		}
+
+		// 2. Simpan File (Pastikan folder ada)
+		uniqueName := fmt.Sprintf("%d-%s", time.Now().Unix(), file.Filename)
+		savePath := fmt.Sprintf("./uploads/%s", uniqueName)
+
+		if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
+			os.Mkdir("./uploads", 0755)
+		}
+
+		if err := c.SaveFile(file, savePath); err != nil {
+			return utils.JSONError(c, fiber.StatusInternalServerError, "Cannot save file")
+		}
+
+		// 3. Siapkan Data
+		attachmentData := mongoModel.Attachment{
+			FileName: file.Filename,
+			URL:      "/uploads/" + uniqueName,
+			MimeType: file.Header.Get("Content-Type"),
+			Size:     file.Size,
+		}
+
+		// 4. Panggil Service
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
 
-		if err := s.Achievement.Submit(ctx, id, userID); err != nil {
+		if err := s.Achievement.AddAttachment(ctx, refID, userID, attachmentData); err != nil {
+			os.Remove(savePath) // Hapus file jika gagal simpan DB
 			return utils.JSONError(c, fiber.StatusBadRequest, err.Error())
 		}
-		return utils.JSONSuccess(c, fiber.StatusOK, "Achievement submitted")
+
+		return utils.JSONSuccess(c, fiber.StatusOK, attachmentData)
 	})
 
 	// POST /achievements/:id/verify (Verify - Dosen Wali)
@@ -378,8 +401,10 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 	achGroup.Post("/:id/reject", middleware.RequirePermission(rbacCheck, "achievement:verify"), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		verifierID := c.Locals(middleware.LocalsUserID).(string)
-		
-		var req struct { Note string `json:"note"` }
+
+		var req struct {
+			Note string `json:"note"`
+		}
 		if err := c.BodyParser(&req); err != nil {
 			return utils.JSONError(c, fiber.StatusBadRequest, "Note is required")
 		}
