@@ -51,8 +51,6 @@ func main() {
 		driver = "mongo"
 	}
 
-
-
 	// Holders
 	var pgDB *sql.DB
 	var mongoClient *mongo.Client
@@ -92,28 +90,28 @@ func main() {
 
 		// ... di dalam fungsi main()
 
-	// Build repositories
-	var userRepo pgrepo.UserRepository
-	// ... repo lainnya ...
-	var tokenRepo pgrepo.TokenRepository // <-- Tambahkan variabel ini
-
-	if pgDB != nil {
-		userRepo = pgrepo.NewUserRepository(pgDB)
+		// Build repositories
+		var userRepo pgrepo.UserRepository
 		// ... repo lainnya ...
-		tokenRepo = pgrepo.NewTokenRepository(pgDB) // <-- Inisialisasi di sini
-	}
+		var tokenRepo pgrepo.TokenRepository // <-- Tambahkan variabel ini
 
-	// Build service repos struct
-	repos := &service.Repos{
-		UserRepo:           userRepo,
-		// ... repo lainnya ...
-		TokenRepo:          tokenRepo, // <-- Masukkan ke struct Repos
-	}
+		if pgDB != nil {
+			userRepo = pgrepo.NewUserRepository(pgDB)
+			// ... repo lainnya ...
+			tokenRepo = pgrepo.NewTokenRepository(pgDB) // <-- Inisialisasi di sini
+		}
 
-	// Create services
-	service.NewServices(pgDB, mongoDB, repos)
-    
-// ...
+		// Build service repos struct
+		repos := &service.Repos{
+			UserRepo: userRepo,
+			// ... repo lainnya ...
+			TokenRepo: tokenRepo, // <-- Masukkan ke struct Repos
+		}
+
+		// Create services
+		service.NewServices(pgDB, mongoDB, repos)
+
+		// ...
 		var err error
 		pgDB, err = db.ConnectPostgres(psqlDsn)
 		if err != nil {
@@ -157,6 +155,7 @@ func main() {
 	var rolePermRepo pgrepo.RolePermissionRepository
 	var achRefRepo pgrepo.AchievementRefRepository
 	var achRepo mongorepo.AchievementRepository
+	var activityLogRepo pgrepo.ActivityLogRepository
 
 	if pgDB != nil {
 		userRepo = pgrepo.NewUserRepository(pgDB)
@@ -166,6 +165,7 @@ func main() {
 		permissionRepo = pgrepo.NewPermissionRepository(pgDB)
 		rolePermRepo = pgrepo.NewRolePermissionRepository(pgDB)
 		achRefRepo = pgrepo.NewAchievementRefRepository(pgDB)
+		activityLogRepo = pgrepo.NewActivityLogRepository(pgDB)
 	}
 
 	if mongoDB != nil {
@@ -182,6 +182,7 @@ func main() {
 		LecturerRepo:       lecturerRepo,
 		AchievementRefRepo: achRefRepo,
 		AchievementRepo:    achRepo,
+		ActivityLogRepo:    activityLogRepo,
 	}
 
 	// Create services
@@ -233,5 +234,5 @@ func main() {
 			log.Println("postgres closed")
 		}
 	}
-	
+
 }
