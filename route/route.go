@@ -383,6 +383,20 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 		return utils.JSONSuccess(c, fiber.StatusOK, attachmentData)
 	})
 
+achGroup.Post("/:id/submit", middleware.RequirePermission(rbacCheck, "achievement:submit"), func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		userID := c.Locals(middleware.LocalsUserID).(string)
+
+		ctx, cancel := timeoutContext(c)
+		defer cancel()
+
+		// Logic validasi "Hanya Mahasiswa" terjadi di dalam fungsi s.Achievement.Submit ini
+		if err := s.Achievement.Submit(ctx, id, userID); err != nil {
+			return utils.JSONError(c, fiber.StatusBadRequest, err.Error())
+		}
+		return utils.JSONSuccess(c, fiber.StatusOK, "Achievement submitted successfully")
+	})
+
 	// POST /achievements/:id/verify (Verify - Dosen Wali)
 	achGroup.Post("/:id/verify", middleware.RequirePermission(rbacCheck, "achievement:verify"), func(c *fiber.Ctx) error {
 		id := c.Params("id")
