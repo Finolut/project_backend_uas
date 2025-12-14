@@ -125,6 +125,19 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 		return utils.JSONSuccess(c, fiber.StatusOK, users)
 	})
 
+	// GET /users/:id
+	userGroup.Get("/:id", middleware.RequirePermission(rbacCheck, "user:read"), func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		ctx, cancel := timeoutContext(c)
+		defer cancel()
+
+		user, err := s.User.GetByID(ctx, id)
+		if err != nil {
+			return utils.JSONError(c, fiber.StatusNotFound, "User not found")
+		}
+		return utils.JSONSuccess(c, fiber.StatusOK, user)
+	})
+
 	// POST /users
 	userGroup.Post("/", middleware.RequirePermission(rbacCheck, "user:create"), func(c *fiber.Ctx) error {
 		var u pgModel.User
@@ -383,7 +396,7 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 		return utils.JSONSuccess(c, fiber.StatusOK, attachmentData)
 	})
 
-achGroup.Post("/:id/submit", middleware.RequirePermission(rbacCheck, "achievement:submit"), func(c *fiber.Ctx) error {
+	achGroup.Post("/:id/submit", middleware.RequirePermission(rbacCheck, "achievement:submit"), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		userID := c.Locals(middleware.LocalsUserID).(string)
 

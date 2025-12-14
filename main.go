@@ -51,6 +51,8 @@ func main() {
 		driver = "mongo"
 	}
 
+
+
 	// Holders
 	var pgDB *sql.DB
 	var mongoClient *mongo.Client
@@ -90,28 +92,28 @@ func main() {
 
 		// ... di dalam fungsi main()
 
-		// Build repositories
-		var userRepo pgrepo.UserRepository
+	// Build repositories
+	var userRepo pgrepo.UserRepository
+	// ... repo lainnya ...
+	var tokenRepo pgrepo.TokenRepository // <-- Tambahkan variabel ini
+
+	if pgDB != nil {
+		userRepo = pgrepo.NewUserRepository(pgDB)
 		// ... repo lainnya ...
-		var tokenRepo pgrepo.TokenRepository // <-- Tambahkan variabel ini
+		tokenRepo = pgrepo.NewTokenRepository(pgDB) // <-- Inisialisasi di sini
+	}
 
-		if pgDB != nil {
-			userRepo = pgrepo.NewUserRepository(pgDB)
-			// ... repo lainnya ...
-			tokenRepo = pgrepo.NewTokenRepository(pgDB) // <-- Inisialisasi di sini
-		}
+	// Build service repos struct
+	repos := &service.Repos{
+		UserRepo:           userRepo,
+		// ... repo lainnya ...
+		TokenRepo:          tokenRepo, // <-- Masukkan ke struct Repos
+	}
 
-		// Build service repos struct
-		repos := &service.Repos{
-			UserRepo: userRepo,
-			// ... repo lainnya ...
-			TokenRepo: tokenRepo, // <-- Masukkan ke struct Repos
-		}
-
-		// Create services
-		service.NewServices(pgDB, mongoDB, repos)
-
-		// ...
+	// Create services
+	service.NewServices(pgDB, mongoDB, repos)
+    
+// ...
 		var err error
 		pgDB, err = db.ConnectPostgres(psqlDsn)
 		if err != nil {
@@ -156,6 +158,7 @@ func main() {
 	var achRefRepo pgrepo.AchievementRefRepository
 	var achRepo mongorepo.AchievementRepository
 	var activityLogRepo pgrepo.ActivityLogRepository
+	var tokenRepo pgrepo.TokenRepository
 
 	if pgDB != nil {
 		userRepo = pgrepo.NewUserRepository(pgDB)
@@ -166,6 +169,7 @@ func main() {
 		rolePermRepo = pgrepo.NewRolePermissionRepository(pgDB)
 		achRefRepo = pgrepo.NewAchievementRefRepository(pgDB)
 		activityLogRepo = pgrepo.NewActivityLogRepository(pgDB)
+		tokenRepo = pgrepo.NewTokenRepository(pgDB) // <--- 2. Inisialisasi TokenRepo
 	}
 
 	if mongoDB != nil {
@@ -183,6 +187,7 @@ func main() {
 		AchievementRefRepo: achRefRepo,
 		AchievementRepo:    achRepo,
 		ActivityLogRepo:    activityLogRepo,
+		TokenRepo:          tokenRepo, // <--- 3. Masukkan ke struct Repos
 	}
 
 	// Create services
@@ -234,5 +239,5 @@ func main() {
 			log.Println("postgres closed")
 		}
 	}
-
+	
 }
