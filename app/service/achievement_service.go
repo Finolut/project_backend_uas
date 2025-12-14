@@ -247,6 +247,11 @@ func (s *AchievementService) DeleteDraft(ctx context.Context, refID string, user
 	if err != nil {
 		return err
 	}
+
+	if err := s.achievementRefPG.Delete(ctx, refID); err != nil {
+		return err
+	}
+
 	if student == nil {
 		return errors.New("student not found")
 	}

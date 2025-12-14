@@ -17,6 +17,7 @@ type AchievementRefRepository interface {
 	UpdateRejectionNote(ctx context.Context, id string, note string) error
 	ListAll(ctx context.Context) ([]*pgmodel.AchievementReference, error)
 	Update(ctx context.Context, ref *pgmodel.AchievementReference) error
+	Delete(ctx context.Context, id string) error
 }
 
 // Implementation
@@ -127,5 +128,11 @@ func (r *achievementRefRepository) Update(ctx context.Context, ref *pgmodel.Achi
 		ref.StudentID, ref.MongoAchievementID, ref.Status, ref.SubmittedAt, ref.VerifiedAt,
 		ref.VerifiedBy, ref.RejectionNote, ref.UpdatedAt, ref.ID,
 	)
+	return err
+}
+
+func (r *achievementRefRepository) Delete(ctx context.Context, id string) error {
+	q := `DELETE FROM achievement_references WHERE id=$1`
+	_, err := r.db.ExecContext(ctx, q, id)
 	return err
 }
