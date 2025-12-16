@@ -105,6 +105,26 @@
             }
           }
         }
+      },
+      "Student": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "user_id": { "type": "string" },
+          "student_id": { "type": "string", "description": "NIM" },
+          "program_study": { "type": "string" },
+          "academic_year": { "type": "string" },
+          "advisor_id": { "type": "string" }
+        }
+      },
+      "Lecturer": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "user_id": { "type": "string" },
+          "lecturer_id": { "type": "string", "description": "NIP/Kode Dosen" },
+          "department": { "type": "string" }
+        }
       }
     }
   },
@@ -167,17 +187,65 @@
     },
     "/users": {
       "get": {
-        "summary": "List All Users",
+        "summary": "List All Users (Admin)",
         "tags": ["Users"],
         "responses": { "200": { "description": "List user" } }
       },
       "post": {
-        "summary": "Create User",
+        "summary": "Create User (Admin)",
         "tags": ["Users"],
         "requestBody": {
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
         },
         "responses": { "201": { "description": "User created" } }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "Get User by ID",
+        "tags": ["Users"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "Detail user",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update User",
+        "tags": ["Users"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+        },
+        "responses": { "200": { "description": "User updated" } }
+      },
+      "delete": {
+        "summary": "Delete User",
+        "tags": ["Users"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "User deleted" } }
+      }
+    },
+    "/users/{id}/role": {
+      "put": {
+        "summary": "Assign Role to User",
+        "tags": ["Users"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Role updated" } }
       }
     },
     "/achievements": {
@@ -207,6 +275,22 @@
           }
         }
       },
+      "put": {
+        "summary": "Update Draft Achievement",
+        "tags": ["Achievements"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AchievementDraftRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated successfully" }
+        }
+      },
       "delete": {
         "summary": "Delete Draft",
         "tags": ["Achievements"],
@@ -214,9 +298,35 @@
         "responses": { "200": { "description": "Deleted" } }
       }
     },
+    "/achievements/{id}/attachments": {
+      "post": {
+        "summary": "Upload Attachment File",
+        "tags": ["Achievements"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "File uploaded successfully" }
+        }
+      }
+    },
     "/achievements/{id}/submit": {
       "post": {
-        "summary": "Submit Draft",
+        "summary": "Submit Draft for Verification",
         "tags": ["Achievements"],
         "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
         "responses": { "200": { "description": "Submitted" } }
@@ -224,7 +334,7 @@
     },
     "/achievements/{id}/verify": {
       "post": {
-        "summary": "Verify Achievement",
+        "summary": "Verify Achievement (Dosen Wali)",
         "tags": ["Achievements"],
         "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
         "responses": { "200": { "description": "Verified" } }
@@ -232,7 +342,7 @@
     },
     "/achievements/{id}/reject": {
       "post": {
-        "summary": "Reject Achievement",
+        "summary": "Reject Achievement (Dosen Wali)",
         "tags": ["Achievements"],
         "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
         "requestBody": {
@@ -250,11 +360,135 @@
         "responses": { "200": { "description": "Rejected" } }
       }
     },
+    "/students": {
+      "get": {
+        "summary": "List All Students",
+        "tags": ["Students"],
+        "responses": {
+          "200": {
+            "description": "List of students",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Student" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/students/{id}": {
+      "get": {
+        "summary": "Get Student Detail",
+        "tags": ["Students"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "Student detail",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Student" } }
+            }
+          }
+        }
+      }
+    },
+    "/students/{id}/achievements": {
+      "get": {
+        "summary": "Get Student Achievements",
+        "tags": ["Students"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "List of achievements for student",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AchievementResponse" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/students/{id}/advisor": {
+      "put": {
+        "summary": "Set Advisor for Student (Admin)",
+        "tags": ["Students"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "advisor_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Advisor updated" } }
+      }
+    },
+    "/lecturers": {
+      "get": {
+        "summary": "List All Lecturers",
+        "tags": ["Lecturers"],
+        "responses": {
+          "200": {
+            "description": "List of lecturers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Lecturer" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lecturers/{id}/advisees": {
+      "get": {
+        "summary": "Get Advisees (Mahasiswa Bimbingan)",
+        "tags": ["Lecturers"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "List of advisees",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Student" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reports/statistics": {
       "get": {
         "summary": "Global Statistics",
         "tags": ["Reports"],
         "responses": { "200": { "description": "Stats data" } }
+      }
+    },
+    "/reports/student/{id}": {
+      "get": {
+        "summary": "Get Individual Student Statistics",
+        "tags": ["Reports"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Student stats data" }
+        }
       }
     }
   }
