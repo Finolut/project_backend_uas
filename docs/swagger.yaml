@@ -1,0 +1,524 @@
+openapi: 3.0.0
+info:
+  title: Sistem Pelaporan Prestasi Mahasiswa API
+  description: API untuk sistem manajemen dan pelaporan prestasi mahasiswa (Clean Architecture).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Auth & Users ---
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "mahasiswa1"
+        password:
+          type: string
+          format: password
+          example: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        role_id:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    # --- Achievements (Mongo & Postgres Mixed) ---
+    AchievementDraftRequest:
+      type: object
+      required:
+        - title
+        - type
+        - category
+        - level
+      properties:
+        title:
+          type: string
+          example: "Juara 1 Lomba Coding Nasional"
+        type:
+          type: string
+          enum: [academic, non-academic]
+        category:
+          type: string
+          example: "Kompetisi"
+        level:
+          type: string
+          enum: [lokal, nasional, internasional]
+        details:
+          type: object
+          description: Field dinamis (JSON) sesuai tipe prestasi
+          example:
+            competitionName: "Gemastik 2025"
+            rank: 1
+            organizer: "Puspresnas"
+        tags:
+          type: array
+          items:
+            type: string
+
+    AchievementResponse:
+      type: object
+      properties:
+        reference:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+              enum: [draft, submitted, verified, rejected]
+            rejection_note:
+              type: string
+        detail:
+          type: object
+          properties:
+            title:
+              type: string
+            details:
+              type: object
+            attachments:
+              type: array
+              items:
+                type: object
+                properties:
+                  fileName:
+                    type: string
+                  url:
+                    type: string
+
+    # --- Common Responses ---
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==========================================
+  # AUTHENTICATION
+  # ==========================================
+  /auth/login:
+    post:
+      summary: Login User
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        200:
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        401:
+          description: Unauthorized (Invalid credentials)
+
+  /auth/refresh:
+    post:
+      summary: Refresh Token
+      tags: [Auth]
+      responses:
+        200:
+          description: Token baru berhasil digenerate
+
+  /auth/logout:
+    post:
+      summary: Logout (Blacklist Token)
+      tags: [Auth]
+      responses:
+        200:
+          description: Berhasil logout
+
+  /auth/profile:
+    get:
+      summary: Get Current User Profile
+      tags: [Auth]
+      responses:
+        200:
+          description: Data user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # ==========================================
+  # USERS (Admin)
+  # ==========================================
+  /users:
+    get:
+      summary: List All Users (RBAC: user:read)
+      tags: [Users]
+      responses:
+        200:
+          description: List user
+    post:
+      summary: Create User (RBAC: user:create)
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        201:
+          description: User created
+
+  /users/{id}:
+    get:
+      summary: Get User by ID
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Detail user
+    put:
+      summary: Update User
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        200:
+          description: User updated
+    delete:
+      summary: Delete User
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: User deleted
+
+  /users/{id}/role:
+    put:
+      summary: Assign Role to User
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role_id:
+                  type: string
+      responses:
+        200:
+          description: Role updated
+
+  # ==========================================
+  # STUDENTS & LECTURERS
+  # ==========================================
+  /students:
+    get:
+      summary: List All Students
+      tags: [Students]
+      responses:
+        200:
+          description: List students
+
+  /students/{id}/advisor:
+    put:
+      summary: Set Advisor for Student (Admin Only)
+      tags: [Students]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                advisor_id:
+                  type: string
+      responses:
+        200:
+          description: Advisor updated
+
+  /lecturers/{id}/advisees:
+    get:
+      summary: Get Students under a Lecturer (Mahasiswa Bimbingan)
+      tags: [Lecturers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List mahasiswa bimbingan
+
+  # ==========================================
+  # ACHIEVEMENTS (Core)
+  # ==========================================
+  /achievements:
+    get:
+      summary: List All Achievements (Filtered)
+      tags: [Achievements]
+      responses:
+        200:
+          description: List achievements reference + mongo data
+    post:
+      summary: Create Draft Achievement (Mahasiswa)
+      tags: [Achievements]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AchievementDraftRequest'
+      responses:
+        201:
+          description: Draft created
+
+  /achievements/{id}:
+    get:
+      summary: Get Achievement Detail
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Detail data (Postgres + Mongo)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementResponse'
+    put:
+      summary: Update Draft Achievement
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AchievementDraftRequest'
+      responses:
+        200:
+          description: Updated successfully
+    delete:
+      summary: Delete Draft Achievement
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Deleted successfully
+
+  /achievements/{id}/attachments:
+    post:
+      summary: Upload Attachment (File)
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: File uploaded, returns attachment metadata
+
+  /achievements/{id}/submit:
+    post:
+      summary: Submit Draft for Verification
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Status changed to submitted
+
+  /achievements/{id}/verify:
+    post:
+      summary: Verify Achievement (Dosen Wali)
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Status changed to verified
+
+  /achievements/{id}/reject:
+    post:
+      summary: Reject Achievement (Dosen Wali)
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - note
+              properties:
+                note:
+                  type: string
+                  example: "Dokumen kurang jelas, mohon upload ulang."
+      responses:
+        200:
+          description: Status changed to rejected
+
+  /achievements/{id}/history:
+    get:
+      summary: Get Achievement Activity Logs
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: History logs
+
+  # ==========================================
+  # REPORTS & STATISTICS
+  # ==========================================
+  /reports/statistics:
+    get:
+      summary: Get Global Statistics
+      tags: [Reports]
+      responses:
+        200:
+          description: Global stats data
+
+  /reports/student/{id}:
+    get:
+      summary: Get Individual Student Statistics
+      tags: [Reports]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Student stats data

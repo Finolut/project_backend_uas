@@ -487,4 +487,19 @@ func RegisterRoutes(app *fiber.App, s *service.Services) {
 		}
 		return utils.JSONSuccess(c, fiber.StatusOK, stats)
 	})
+
+	// GET /students/:id/achievements
+	studentGroup.Get("/:id/achievements", func(c *fiber.Ctx) error {
+		id := c.Params("id") // ID yang dikirim lewat URL
+		ctx, cancel := timeoutContext(c)
+		defer cancel()
+
+		// Panggil service untuk mengambil prestasi berdasarkan Student ID
+		// CATATAN: Service ini mengharapkan UUID (misal: "c7b2dfe3..."), bukan NIM ("MHS-2023-001")
+		achievements, err := s.Achievement.ListByStudent(ctx, id)
+		if err != nil {
+			return utils.JSONError(c, fiber.StatusInternalServerError, err.Error())
+		}
+		return utils.JSONSuccess(c, fiber.StatusOK, achievements)
+	})
 }

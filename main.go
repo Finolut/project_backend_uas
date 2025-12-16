@@ -198,8 +198,15 @@ func main() {
 	route.RegisterRoutes(app, services)
 
 	// Swagger route
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+// 1. Sajikan folder docs agar file swagger.yaml bisa diakses browser
+    app.Static("/docs", "./docs")
 
+    // 2. Konfigurasi Swagger UI menggunakan FiberWrapHandler dan Functional Options
+    app.Get("/swagger/*", fiberSwagger.FiberWrapHandler(
+        fiberSwagger.URL("/docs/swagger.yaml"), // URL menuju file YAML manual Anda
+        fiberSwagger.DeepLinking(false),
+        fiberSwagger.DocExpansion("none"),
+    ))
 	// Start server with graceful shutdown
 	port := conf.AppPort
 	if port == "" {
