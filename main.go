@@ -51,8 +51,6 @@ func main() {
 		driver = "mongo"
 	}
 
-
-
 	// Holders
 	var pgDB *sql.DB
 	var mongoClient *mongo.Client
@@ -92,28 +90,28 @@ func main() {
 
 		// ... di dalam fungsi main()
 
-	// Build repositories
-	var userRepo pgrepo.UserRepository
-	// ... repo lainnya ...
-	var tokenRepo pgrepo.TokenRepository // <-- Tambahkan variabel ini
-
-	if pgDB != nil {
-		userRepo = pgrepo.NewUserRepository(pgDB)
+		// Build repositories
+		var userRepo pgrepo.UserRepository
 		// ... repo lainnya ...
-		tokenRepo = pgrepo.NewTokenRepository(pgDB) // <-- Inisialisasi di sini
-	}
+		var tokenRepo pgrepo.TokenRepository // <-- Tambahkan variabel ini
 
-	// Build service repos struct
-	repos := &service.Repos{
-		UserRepo:           userRepo,
-		// ... repo lainnya ...
-		TokenRepo:          tokenRepo, // <-- Masukkan ke struct Repos
-	}
+		if pgDB != nil {
+			userRepo = pgrepo.NewUserRepository(pgDB)
+			// ... repo lainnya ...
+			tokenRepo = pgrepo.NewTokenRepository(pgDB) // <-- Inisialisasi di sini
+		}
 
-	// Create services
-	service.NewServices(pgDB, mongoDB, repos)
-    
-// ...
+		// Build service repos struct
+		repos := &service.Repos{
+			UserRepo: userRepo,
+			// ... repo lainnya ...
+			TokenRepo: tokenRepo, // <-- Masukkan ke struct Repos
+		}
+
+		// Create services
+		service.NewServices(pgDB, mongoDB, repos)
+
+		// ...
 		var err error
 		pgDB, err = db.ConnectPostgres(psqlDsn)
 		if err != nil {
@@ -198,15 +196,15 @@ func main() {
 	route.RegisterRoutes(app, services)
 
 	// Swagger route
-// 1. Sajikan folder docs agar file swagger.yaml bisa diakses browser
-    app.Static("/docs", "./docs")
+	// 1. Sajikan folder docs agar file swagger.yaml bisa diakses browser
+	app.Static("/docs", "./docs")
 
-    // 2. Konfigurasi Swagger UI menggunakan FiberWrapHandler dan Functional Options
-    app.Get("/swagger/*", fiberSwagger.FiberWrapHandler(
-        fiberSwagger.URL("/docs/swagger.yaml"), // URL menuju file YAML manual Anda
-        fiberSwagger.DeepLinking(false),
-        fiberSwagger.DocExpansion("none"),
-    ))
+	// 2. Konfigurasi Swagger UI menggunakan FiberWrapHandler dan Functional Options
+	app.Get("/swagger/*", fiberSwagger.FiberWrapHandler(
+		fiberSwagger.URL("/docs/swagger.json"), // URL menuju file YAML manual Anda
+		fiberSwagger.DeepLinking(false),
+		fiberSwagger.DocExpansion("none"),
+	))
 	// Start server with graceful shutdown
 	port := conf.AppPort
 	if port == "" {
@@ -246,5 +244,5 @@ func main() {
 			log.Println("postgres closed")
 		}
 	}
-	
+
 }

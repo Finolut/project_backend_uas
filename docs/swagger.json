@@ -1,0 +1,261 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sistem Pelaporan Prestasi Mahasiswa API",
+    "description": "API untuk sistem manajemen dan pelaporan prestasi mahasiswa (Clean Architecture).",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string", "example": "mahasiswa1" },
+          "password": { "type": "string", "format": "password", "example": "password123" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": { "type": "string" },
+              "user": { "$ref": "#/components/schemas/User" }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "full_name": { "type": "string" },
+          "role_id": { "type": "string" },
+          "is_active": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AchievementDraftRequest": {
+        "type": "object",
+        "required": ["title", "type", "category", "level"],
+        "properties": {
+          "title": { "type": "string", "example": "Juara 1 Lomba Coding Nasional" },
+          "type": { "type": "string", "enum": ["academic", "non-academic"] },
+          "category": { "type": "string", "example": "Kompetisi" },
+          "level": { "type": "string", "enum": ["lokal", "nasional", "internasional"] },
+          "details": {
+            "type": "object",
+            "description": "Field dinamis (JSON) sesuai tipe prestasi",
+            "example": {
+              "competitionName": "Gemastik 2025",
+              "rank": 1,
+              "organizer": "Puspresnas"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "AchievementResponse": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "status": { "type": "string", "enum": ["draft", "submitted", "verified", "rejected"] },
+              "rejection_note": { "type": "string" }
+            }
+          },
+          "detail": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "details": { "type": "object" },
+              "attachments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fileName": { "type": "string" },
+                    "url": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Login User",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login berhasil",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Refresh Token",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "Token baru berhasil digenerate" } }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "Berhasil logout" } }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "summary": "Get Current User Profile",
+        "tags": ["Auth"],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/User" } }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "List All Users",
+        "tags": ["Users"],
+        "responses": { "200": { "description": "List user" } }
+      },
+      "post": {
+        "summary": "Create User",
+        "tags": ["Users"],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+        },
+        "responses": { "201": { "description": "User created" } }
+      }
+    },
+    "/achievements": {
+      "get": {
+        "summary": "List Achievements",
+        "tags": ["Achievements"],
+        "responses": { "200": { "description": "List achievements" } }
+      },
+      "post": {
+        "summary": "Create Draft Achievement",
+        "tags": ["Achievements"],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AchievementDraftRequest" } } }
+        },
+        "responses": { "201": { "description": "Draft created" } }
+      }
+    },
+    "/achievements/{id}": {
+      "get": {
+        "summary": "Get Achievement Detail",
+        "tags": ["Achievements"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "Detail data",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AchievementResponse" } } }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Draft",
+        "tags": ["Achievements"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/achievements/{id}/submit": {
+      "post": {
+        "summary": "Submit Draft",
+        "tags": ["Achievements"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Submitted" } }
+      }
+    },
+    "/achievements/{id}/verify": {
+      "post": {
+        "summary": "Verify Achievement",
+        "tags": ["Achievements"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Verified" } }
+      }
+    },
+    "/achievements/{id}/reject": {
+      "post": {
+        "summary": "Reject Achievement",
+        "tags": ["Achievements"],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["note"],
+                "properties": { "note": { "type": "string", "example": "Rejection note" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Rejected" } }
+      }
+    },
+    "/reports/statistics": {
+      "get": {
+        "summary": "Global Statistics",
+        "tags": ["Reports"],
+        "responses": { "200": { "description": "Stats data" } }
+      }
+    }
+  }
+}
